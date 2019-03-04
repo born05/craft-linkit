@@ -21,11 +21,11 @@ class Install extends Migration
 {
     public function safeUp()
     {
-        $this->_upgradeFromCraft2();
+        $this->upgradeFromCraft2();
         return true;
     }
 
-    protected function _upgradeFromCraft2()
+    protected function upgradeFromCraft2()
     {
         // Locate and remove old linkit
         $row = (new \craft\db\Query())
@@ -46,13 +46,19 @@ class Install extends Migration
             ->all();
         foreach ($fields as $field)
         {
-            $oldSettings = $field['settings'] ? Json::decode($field['settings']) : null;
-            $newSettings = $this->_migrateFieldSettings($oldSettings);
+            if (isset($field['type']) && $field['type'] === 'FruitLinkIt')
+            {
+                $type = LinkitField::class;
+                $settings = $this->_migrateFieldSettings($field['settings'] ? Json::decode($field['settings']) : null);
 
-            $this->update('{{%fields}}', [
-                'type' => LinkitField::class,
-                'settings' => Json::encode($newSettings)
-            ], ['uid' => $field['uid']]);
+                $field['type'] = $type;
+                $field['settings'] = $settings;
+
+                $this->update('{{%fields}}', [
+                    'type' => LinkitField::class,
+                    'settings' => Json::encode($settings)
+                ], ['uid' => $field['uid']]);
+            }
         }
     }
 
@@ -135,7 +141,6 @@ class Install extends Migration
                 }
             }
         }
-
 
         return $newSettings;
     }
